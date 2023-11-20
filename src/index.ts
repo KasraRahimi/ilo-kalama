@@ -3,7 +3,7 @@ import { Ilo } from '@src/Ilo';
 import { token } from '@base/config.json'
 
 const client = new Ilo({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessageReactions]
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.GuildMessageReactions]
 });
 
 async function main() {
