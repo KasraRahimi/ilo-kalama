@@ -12,6 +12,10 @@ module.exports = {
         }
 
         try {
+            if (command.needsClient) {
+                await command.execute(interaction, client);
+                return;
+            }
             await command.execute(interaction);
         } catch (error) {
             console.error(error);
