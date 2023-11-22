@@ -1,7 +1,7 @@
 import { Video } from "@src/classes/Video/Video";
 import { youtube } from "scrape-youtube";
 
-export const search = async (query: string): Promise<Video[]> => {
+export const searchYoutubeVideos = async (query: string): Promise<Video[]> => {
     const results = await youtube.search(query);
     const videos: Video[] = results.videos.map(video => new Video(video.title, video.link, video.duration));
     if (videos.length <= 5) return Promise.resolve(videos);
