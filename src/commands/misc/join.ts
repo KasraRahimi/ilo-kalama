@@ -1,57 +1,83 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, GuildMember } from "discord.js";
-import { VoiceConnectionStatus, AudioPlayerStatus, joinVoiceChannel, createAudioPlayer, createAudioResource } from "@discordjs/voice";
+import { SlashCommandBuilder, ChatInputCommandInteraction, GuildMember, ButtonBuilder, ButtonStyle, ActionRowBuilder } from "discord.js";
+import { searchYoutubeVideos, videoArrToString } from "@src/functions/youtube";
 import ytdl from 'ytdl-core';
 import { join } from 'path';
+import { Ilo } from "@src/Ilo";
+import { Session } from "@src/classes/Session/Session";
+import { Video } from "@src/classes/Video/Video";
 
 const link = 'https://www.youtube.com/watch?v=jhYg5NrN-r8';
 
+const makeButtonRow = (count: number) => {
+    const buttons = [];
+    for (let i = 0; i < count; i++) {
+        const button = new ButtonBuilder()
+            .setCustomId(`${i}`)
+            .setLabel(`${i}`)
+            .setStyle(ButtonStyle.Primary);
+        buttons.push(button);
+    }
+    return new ActionRowBuilder<ButtonBuilder>().addComponents(buttons);
+}
+
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('join')
-        .setDescription('joins voice channel'),
-    async execute(interaction: ChatInputCommandInteraction) {
-        await interaction.reply('joining!');
+        .setName('play')
+        .setDescription('plays music in your voice channel')
+        .addStringOption(option => option
+            .setName('search')
+            .setDescription('the title of the youtube you want to play')
+            .setRequired(true)
+        ),
+    needsClient: true,
+    async execute(interaction: ChatInputCommandInteraction, client: Ilo) {
+        const search = interaction.options.getString('search');
         const guild = interaction.guild;
-        if (guild === null) await interaction.editReply('you can only use this command in a server');
-
+        const channel = interaction.channel;
+        if (guild === null || channel === null) {
+            await interaction.reply('you can only use this command in a server');
+            return;
+        }
         const guildMember = interaction.member as GuildMember | null;
-        if (guildMember === null) await interaction.editReply('Some error occured, please try again.');
-        const voiceChannel = guildMember!.voice.channel;
-        if (voiceChannel === null) await interaction.editReply('you must first be connected to a voice channel');
+        if (guildMember === null || search === null) {
+            await interaction.reply('Some error occured, please try again.');
+            return;
+        }
+        const voiceChannel = guildMember.voice.channel;
+        if (voiceChannel === null) {
+            await interaction.reply('you must first be connected to a voice channel');
+            return;
+        }
 
-        const channelId = voiceChannel!.id;
-        const guildId = guild!.id;
-        const adaptorCreator = guild!.voiceAdapterCreator;
-
-        const connection = joinVoiceChannel({
-            channelId: channelId,
-            guildId: guildId,
-            adapterCreator: adaptorCreator
+        let session = client.sessions.get(guild.id);
+        if (session == undefined) {
+            try {
+                session = new Session(guild, channel, voiceChannel);
+                client.sessions.set(guild.id, session);
+            } catch (error) {
+                console.error(error);
+                await interaction.editReply('There was an error while connecting to the voice chat.');
+                return;
+            }
+        }
+        const videos: Video[] = await searchYoutubeVideos(search);
+        const row = makeButtonRow(videos.length);
+        let selection: number | undefined;
+        const response = await interaction.reply({
+            content: `Choose a video to play\n${await videoArrToString(videos)}`,
+            components: [row],
         });
-
-        let player = createAudioPlayer();
-        player.on('error', (error) => {
+        const confirmationFilter = (i: any) => i.user.id === interaction.user.id;
+        try {
+            const confirmation = await response.awaitMessageComponent({ filter: confirmationFilter, time: 30_000 });
+            confirmation.update({ content: 'Playing video', components: [] });
+            selection = parseInt(confirmation.customId);
+        } catch (error) {
             console.error(error);
-        });
-        player.on(AudioPlayerStatus.Playing, () => {
-            console.log('playing audio');
-        });
-        player.on(AudioPlayerStatus.Idle, () => {
-            console.log('idle');
-        });
-        player.on(AudioPlayerStatus.Paused, () => {
-            console.log('paused');
-        });
-        connection.subscribe(player);
-
-        const video = await ytdl(link, { filter: 'audioonly' });
-        const resource = createAudioResource(video);
-        player.play(resource);
-        console.log('playing it');
-        const thing = await new Promise((resolve) => {
-            setTimeout(resolve, 180_000);
-        })
-        console.log('done');
-        connection.destroy();
+            await interaction.editReply({ content: 'You did not select a video in time', components: [] });
+            return;
+        }
+        session.setVideo(videos[selection]);
+        await session.play();
     }
 }
