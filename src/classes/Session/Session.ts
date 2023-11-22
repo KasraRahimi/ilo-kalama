@@ -1,6 +1,6 @@
 import { AudioPlayer, AudioPlayerStatus, VoiceConnection, createAudioPlayer, createAudioResource, joinVoiceChannel } from '@discordjs/voice';
 import { Video } from '@src/classes/Video/Video';
-import { Channel, Guild, TextChannel, VoiceBasedChannel } from 'discord.js';
+import { Channel, Guild, TextBasedChannel, VoiceBasedChannel } from 'discord.js';
 
 const TIMEOUT = 30_000;
 
@@ -10,9 +10,9 @@ export class Session {
     private _connection: VoiceConnection;
     private _player: AudioPlayer;
     private _timeout: NodeJS.Timeout | undefined;
-    _textChannel: TextChannel;
+    _textChannel: TextBasedChannel;
 
-    constructor(guild: Guild, textChannel: TextChannel, vc: VoiceBasedChannel) {
+    constructor(guild: Guild, textChannel: TextBasedChannel, vc: VoiceBasedChannel) {
         this._guild = guild;
         this._textChannel = textChannel;
         this._currentVideo = null;
