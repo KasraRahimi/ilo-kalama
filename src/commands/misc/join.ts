@@ -1,10 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, GuildMember, ButtonBuilder, ButtonStyle, ActionRowBuilder } from "discord.js";
 import { searchYoutubeVideos, videoArrToString } from "@src/functions/youtube";
-import ytdl from 'ytdl-core';
-import { join } from 'path';
 import { Ilo } from "@src/Ilo";
 import { Session } from "@src/classes/Session/Session";
-import { Video } from "@src/classes/Video/Video";
 
 const link = 'https://www.youtube.com/watch?v=jhYg5NrN-r8';
 
@@ -13,7 +10,7 @@ const makeButtonRow = (count: number) => {
     for (let i = 0; i < count; i++) {
         const button = new ButtonBuilder()
             .setCustomId(`${i}`)
-            .setLabel(`${i}`)
+            .setLabel(`${i+1}`)
             .setStyle(ButtonStyle.Primary);
         buttons.push(button);
     }
@@ -60,7 +57,7 @@ module.exports = {
                 return;
             }
         }
-        const videos: Video[] = await searchYoutubeVideos(search);
+        const videos = await searchYoutubeVideos(search);
         const row = makeButtonRow(videos.length);
         let selection: number | undefined;
         const response = await interaction.reply({

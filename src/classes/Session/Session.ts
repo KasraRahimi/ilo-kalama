@@ -1,12 +1,13 @@
 import { AudioPlayer, AudioPlayerStatus, VoiceConnection, createAudioPlayer, createAudioResource, joinVoiceChannel } from '@discordjs/voice';
-import { Video } from '@src/classes/Video/Video';
 import { Channel, Guild, TextBasedChannel, VoiceBasedChannel } from 'discord.js';
+import { YouTubeVideo } from 'play-dl';
+import play from 'play-dl';
 
 const TIMEOUT = 30_000;
 
 export class Session {
     private readonly _guild: Guild;
-    private _currentVideo: Video | null;
+    private _currentVideo: YouTubeVideo | null;
     private _connection: VoiceConnection;
     private _player: AudioPlayer;
     private _timeout: NodeJS.Timeout | undefined;
@@ -23,13 +24,14 @@ export class Session {
         this.setPlayerEvents();
     }
 
-    setVideo(video: Video) {
+    setVideo(video: YouTubeVideo) {
         this._currentVideo = video;
     }
 
     async play() {
         if (this._currentVideo === null) return;
-        const resource = createAudioResource(await this._currentVideo.getAudio());
+        const stream = await play.stream(this._currentVideo.url);
+        const resource = createAudioResource(stream.stream, { inputType: stream.type });
         this._player.play(resource);
     }
 
