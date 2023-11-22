@@ -43,6 +43,10 @@ export class Session {
     }
 
     private setPlayerEvents() {
+        this._player.on('error', error => {
+            console.error(error);
+            this._textChannel.send('There was an error while playing audio.');
+        });
         // Handle Idle state
         this._player.on(AudioPlayerStatus.Idle, () => {
             this._textChannel.send('Done playing audio. Leaving voice channel soon.');
