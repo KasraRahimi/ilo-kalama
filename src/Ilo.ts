@@ -2,9 +2,11 @@ import { Client, ClientOptions, Collection } from 'discord.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getCommands } from '@src/get-commands';
+import { Session } from '@src/classes/Session/Session';
 
 export class Ilo extends Client {
     commands: Collection<any, any> = new Collection();
+    sessions: Collection<string, Session> = new Collection();
 
     constructor(options: ClientOptions) {
         super(options);
