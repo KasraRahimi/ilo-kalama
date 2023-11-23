@@ -45,18 +45,6 @@ module.exports = {
             await interaction.reply('you must first be connected to a voice channel');
             return;
         }
-
-        let session = client.sessions.get(guild.id);
-        if (session == undefined) {
-            try {
-                session = new Session(guild, channel, voiceChannel, client);
-                client.sessions.set(guild.id, session);
-            } catch (error) {
-                console.error(error);
-                await interaction.editReply('There was an error while connecting to the voice chat.');
-                return;
-            }
-        }
         const videos = await searchYoutubeVideos(search);
         const row = makeButtonRow(videos.length);
         let selection: number | undefined;
@@ -74,7 +62,18 @@ module.exports = {
             await interaction.editReply({ content: 'You did not select a video in time', components: [] });
             return;
         }
-        session.setVideo(videos[selection]);
-        await session.play();
+        
+        let session = client.sessions.get(guild.id);
+        if (session == undefined) {
+            try {
+                session = new Session(guild, channel, voiceChannel, client);
+                client.sessions.set(guild.id, session);
+            } catch (error) {
+                console.error(error);
+                await interaction.editReply('There was an error while connecting to the voice chat.');
+                return;
+            }
+        }
+        await session.addToQueue(videos[selection]);
     }
 }
