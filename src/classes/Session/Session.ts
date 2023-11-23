@@ -9,6 +9,7 @@ const TIMEOUT = 3_000;
 export class Session {
     private readonly _guild: Guild;
     private _currentVideo: YouTubeVideo | null;
+    private _queue: YouTubeVideo[] = [];
     private _connection: VoiceConnection;
     private _player: AudioPlayer;
     private _timeout: NodeJS.Timeout | undefined;
@@ -30,6 +31,25 @@ export class Session {
 
     setVideo(video: YouTubeVideo) {
         this._currentVideo = video;
+    }
+
+    async addToQueue(video: YouTubeVideo) {
+        if (this._currentVideo === null) {
+            this.setVideo(video);
+            await this.play();
+            return;
+        }
+        this._queue.push(video);
+    };
+
+    async playNext() {
+        if (this._queue.length === 0) {
+            this._currentVideo = null;
+            return;
+        }
+        const video = this._queue.shift();
+        if (video) this.setVideo(video);
+        await this.play();
     }
 
     async play() {
@@ -54,14 +74,17 @@ export class Session {
             this._textChannel.send('There was an error while playing audio.');
         });
         // Handle Idle state
-        this._player.on(AudioPlayerStatus.Idle, () => {
-            this._textChannel.send('Done playing audio. Leaving voice channel soon.');
+        this._player.on(AudioPlayerStatus.Idle, async () => {
+            await this.playNext();
+            if (this._currentVideo) return;
+            this._textChannel.send('Playback is over. Leaving voice channel in 30 seconds');
             this._timeout = setTimeout(() => {
                 this.handleSessionEnd();
             }, TIMEOUT);
         });
         // Handle Playing state
         this._player.on(AudioPlayerStatus.Playing, () => {
+            this._textChannel.send(`Now playing: ${this._currentVideo?.title}`);
             if (this._timeout) return;
             clearTimeout(this._timeout);
         });
