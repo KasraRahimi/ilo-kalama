@@ -29,6 +29,10 @@ export class Session {
         this.setConnectionEvents();
     }
 
+    get queue() {
+        return this._queue;
+    }
+
     setVideo(video: YouTubeVideo) {
         this._currentVideo = video;
     }
@@ -57,6 +61,14 @@ export class Session {
         const stream = await play.stream(this._currentVideo.url);
         const resource = createAudioResource(stream.stream, { inputType: stream.type });
         this._player.play(resource);
+    }
+
+    pause() {
+        this._player.pause();
+    }
+
+    resume() {
+        this._player.unpause();
     }
 
     private getConnection(channelId: string): VoiceConnection {
