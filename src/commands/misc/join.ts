@@ -31,11 +31,11 @@ module.exports = {
         const search = interaction.options.getString('search');
         const guild = interaction.guild;
         const channel = interaction.channel;
+        const guildMember = interaction.member as GuildMember | null;
         if (guild === null || channel === null) {
             await interaction.reply('you can only use this command in a server');
             return;
         }
-        const guildMember = interaction.member as GuildMember | null;
         if (guildMember === null || search === null) {
             await interaction.reply('Some error occured, please try again.');
             return;
