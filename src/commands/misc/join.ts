@@ -49,7 +49,7 @@ module.exports = {
         let session = client.sessions.get(guild.id);
         if (session == undefined) {
             try {
-                session = new Session(guild, channel, voiceChannel);
+                session = new Session(guild, channel, voiceChannel, client);
                 client.sessions.set(guild.id, session);
             } catch (error) {
                 console.error(error);

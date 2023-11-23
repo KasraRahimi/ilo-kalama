@@ -1,9 +1,10 @@
-import { AudioPlayer, AudioPlayerStatus, VoiceConnection, createAudioPlayer, createAudioResource, joinVoiceChannel } from '@discordjs/voice';
-import { Channel, Guild, TextBasedChannel, VoiceBasedChannel } from 'discord.js';
+import { AudioPlayer, AudioPlayerStatus, VoiceConnection, VoiceConnectionStatus, createAudioPlayer, createAudioResource, joinVoiceChannel } from '@discordjs/voice';
+import { Ilo } from '@src/Ilo';
+import { Guild, TextBasedChannel, VoiceBasedChannel } from 'discord.js';
 import { YouTubeVideo } from 'play-dl';
 import play from 'play-dl';
 
-const TIMEOUT = 30_000;
+const TIMEOUT = 3_000;
 
 export class Session {
     private readonly _guild: Guild;
@@ -11,17 +12,20 @@ export class Session {
     private _connection: VoiceConnection;
     private _player: AudioPlayer;
     private _timeout: NodeJS.Timeout | undefined;
+    private _client: Ilo;
     _textChannel: TextBasedChannel;
 
-    constructor(guild: Guild, textChannel: TextBasedChannel, vc: VoiceBasedChannel) {
+    constructor(guild: Guild, textChannel: TextBasedChannel, vc: VoiceBasedChannel, client: Ilo) {
         this._guild = guild;
         this._textChannel = textChannel;
         this._currentVideo = null;
+        this._client = client;
 
         this._connection = this.getConnection(vc.id);
         this._player = createAudioPlayer();
         this._connection.subscribe(this._player);
         this.setPlayerEvents();
+        this.setConnectionEvents();
     }
 
     setVideo(video: YouTubeVideo) {
@@ -63,8 +67,18 @@ export class Session {
         });
     }
 
+    private setConnectionEvents() {
+        this._connection.on('error', error => {
+            console.error(error);
+            this._textChannel.send('There was an error while playing audio.');
+        });
+        this._connection.on(VoiceConnectionStatus.Destroyed, () => {
+            this._client.sessions.delete(this._guild.id);
+        })
+    }
+
     private handleSessionEnd() {
         this._player.stop();
-        this._connection.destroy();    
+        this._connection.destroy();  
     }
 }
