@@ -53,14 +53,13 @@ export class Session {
     async playNext() {
         if (this._queue.length === 0) {
             this._currentVideo = null;
+            this._player.stop();
             return;
         }
         const video = this._queue.shift();
         if (video) {
             this.setVideo(video);
             await this.play();
-        } else {
-            await this._player.stop();
         }
     }
 
