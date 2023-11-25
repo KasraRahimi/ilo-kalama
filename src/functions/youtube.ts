@@ -9,8 +9,8 @@ export const videoToString = (video: YouTubeVideo): string => {
     return `${video.title} (${video.durationRaw})`;
 };
 
-export const videoArrToString = (videos: YouTubeVideo[]): string => {
+export const videoArrToString = (videos: YouTubeVideo[], startingIndex: number=1): string => {
     return videos.map((video: YouTubeVideo, index: number) => {
-        return `${index + 1}. ${videoToString(video)}`;
+        return `**${index + startingIndex}.** ${videoToString(video)}`;
     }).join('\n');
 }
