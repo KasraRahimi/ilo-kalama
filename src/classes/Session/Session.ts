@@ -33,6 +33,10 @@ export class Session {
         return this._queue;
     }
 
+    get currentVideo() {
+        return this._currentVideo;
+    }
+
     setVideo(video: YouTubeVideo) {
         this._currentVideo = video;
     }
@@ -52,13 +56,25 @@ export class Session {
             return;
         }
         const video = this._queue.shift();
-        if (video) this.setVideo(video);
-        await this.play();
+        if (video) {
+            this.setVideo(video);
+            await this.play();
+        } else {
+            await this._player.stop();
+        }
     }
 
     async play() {
         if (this._currentVideo === null) return;
+        this._textChannel.send(`Now playing: ${this._currentVideo.title}`);
         const stream = await play.stream(this._currentVideo.url);
+        const resource = createAudioResource(stream.stream, { inputType: stream.type });
+        this._player.play(resource);
+    }
+
+    async seek(seconds: number) {
+        if (this._currentVideo === null) return;
+        const stream = await play.stream(this._currentVideo.url, { seek: seconds });
         const resource = createAudioResource(stream.stream, { inputType: stream.type });
         this._player.play(resource);
     }
@@ -96,7 +112,6 @@ export class Session {
         });
         // Handle Playing state
         this._player.on(AudioPlayerStatus.Playing, () => {
-            this._textChannel.send(`Now playing: ${this._currentVideo?.title}`);
             if (this._timeout) return;
             clearTimeout(this._timeout);
         });
