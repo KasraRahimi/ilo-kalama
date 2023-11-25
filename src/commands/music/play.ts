@@ -62,6 +62,10 @@ module.exports = {
 
         // Find the list of videos and prompt user to select one
         const videos = await searchYoutubeVideos(info.search);
+        if (videos.length === 0) {
+            await interaction.reply('No videos found');
+            return;
+        }
         const row = makeButtonRow(videos.length);
         let selection: number;
         const response = await interaction.reply({
