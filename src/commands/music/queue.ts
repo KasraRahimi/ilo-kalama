@@ -3,7 +3,7 @@ import { Ilo } from "@src/Ilo";
 import { videoArrToString } from "@src/functions/youtube";
 import { YouTubeVideo } from "play-dl";
 
-const PAGE_SIZE = 3;
+const PAGE_SIZE = 20;
 const TIME_TILL_QUEUE_EXPIRES = 10 * 60_000;
 
 module.exports = {
