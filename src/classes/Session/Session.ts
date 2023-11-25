@@ -86,6 +86,11 @@ export class Session {
         this._player.unpause();
     }
 
+    handleSessionEnd() {
+        this._player.stop();
+        this._connection.destroy();  
+    }
+
     private getConnection(channelId: string): VoiceConnection {
         const adapterCreator = this._guild.voiceAdapterCreator;
         return joinVoiceChannel({
@@ -122,12 +127,8 @@ export class Session {
             this._textChannel.send('There was an error while playing audio.');
         });
         this._connection.on(VoiceConnectionStatus.Destroyed, () => {
+            this._textChannel.send('Leaving voice channel');
             this._client.sessions.delete(this._guild.id);
         })
-    }
-
-    private handleSessionEnd() {
-        this._player.stop();
-        this._connection.destroy();  
     }
 }
