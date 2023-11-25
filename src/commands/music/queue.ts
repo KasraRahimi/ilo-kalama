@@ -52,7 +52,7 @@ module.exports = {
         });
 
         collector.on('end', async () => {
-            await msg.edit({ content: `${title}\n${queuePages[currentPage]}`, components: [] });
+            await msg.edit({ components: [] });
         });
     }
 }
