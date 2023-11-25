@@ -23,6 +23,11 @@ module.exports = {
             return;
         }
 
+        if (session.queue.length === 0) {
+            await interaction.reply('The queue is empty');
+            return;
+        }
+
         // Get the queue and send it to the user
         const queuePages = pagesOfQueue(session.queue, PAGE_SIZE)
         const title = `__**~ The Queue ~**__`;
