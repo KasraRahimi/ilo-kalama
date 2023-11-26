@@ -29,7 +29,7 @@ module.exports = {
         }
 
         // Get the queue and send it to the user
-        const queuePages = pagesOfQueue(session.queue, PAGE_SIZE)
+        const queuePages = pagesOfQueue(session.queue, PAGE_SIZE, session.currentIndex)
         const title = `__**~ The Queue ~**__`;
         const lastPage = queuePages.length - 1;
         let currentPage = 0;
@@ -57,15 +57,19 @@ module.exports = {
     }
 }
 
-const pagesOfQueue = (queue: YouTubeVideo[], pageSize: number): string[] => {
+const pagesOfQueue = (queue: YouTubeVideo[], pageSize: number, currentIndex: number): string[] => {
     const pages: YouTubeVideo[][] = [];
     queue.forEach((video: YouTubeVideo, index: number) => {
         const indexInPage = Math.floor(index / pageSize);
         if (pages[indexInPage]) pages[indexInPage].push(video);
         else pages[indexInPage] = [video];
     });
-    return pages.map((page: YouTubeVideo[], index: number) =>
-        videoArrToString(page, index * pageSize + 1)
+    return pages.map((page: YouTubeVideo[], pageIndex: number) =>
+        videoArrToString(page, (video: YouTubeVideo, index: number) => {
+            const globalIndex = pageIndex * pageSize + index + 1;
+            const videoInformation = `**${globalIndex}.** ${video.title} (${video.durationRaw})`;
+            return globalIndex === currentIndex + 1 ? `__${videoInformation}__` : videoInformation;
+        })
     );
 };
 
