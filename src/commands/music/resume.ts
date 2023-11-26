@@ -17,6 +17,6 @@ module.exports = {
             return;
         }
         session.resume();
-        await interaction.reply('Content has been paused');
+        await interaction.reply('Content has been resumed');
     }
 }
