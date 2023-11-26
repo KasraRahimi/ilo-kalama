@@ -8,7 +8,7 @@ const TIMEOUT = 3_000;
 
 export class Session {
     private readonly _guild: Guild;
-    private _currentVideo: YouTubeVideo | null;
+    private _currentIndex: number = 0;
     private _queue: YouTubeVideo[] = [];
     private _connection: VoiceConnection;
     private _player: AudioPlayer;
@@ -19,7 +19,6 @@ export class Session {
     constructor(guild: Guild, textChannel: TextBasedChannel, vc: VoiceBasedChannel, client: Ilo) {
         this._guild = guild;
         this._textChannel = textChannel;
-        this._currentVideo = null;
         this._client = client;
 
         this._connection = this.getConnection(vc.id);
@@ -34,46 +33,37 @@ export class Session {
     }
 
     get currentVideo() {
-        return this._currentVideo;
+        return this.queue[this._currentIndex];
     }
 
-    setVideo(video: YouTubeVideo) {
-        this._currentVideo = video;
+    get currentIndex() {
+        return this._currentIndex;
     }
 
     async addToQueue(video: YouTubeVideo) {
-        if (this._currentVideo === null) {
-            this.setVideo(video);
-            await this.play();
-            return;
-        }
+        const shouldPlay = this.currentVideo ? false : true;
         this._queue.push(video);
+        if (shouldPlay) await this.play();
     };
 
     async playNext() {
-        if (this._queue.length === 0) {
-            this._currentVideo = null;
-            this._player.stop();
-            return;
-        }
-        const video = this._queue.shift();
-        if (video) {
-            this.setVideo(video);
+        if (this._currentIndex < this._queue.length) {
+            this._currentIndex++;
             await this.play();
         }
     }
 
     async play() {
-        if (this._currentVideo === null) return;
-        this._textChannel.send(`Now playing: ${this._currentVideo.title}`);
-        const stream = await play.stream(this._currentVideo.url);
+        if (this._currentIndex === this._queue.length) return;
+        this._textChannel.send(`Now playing: ${this.currentVideo.title}`);
+        const stream = await play.stream(this.currentVideo.url);
         const resource = createAudioResource(stream.stream, { inputType: stream.type });
         this._player.play(resource);
     }
 
     async seek(seconds: number) {
-        if (this._currentVideo === null) return;
-        const stream = await play.stream(this._currentVideo.url, { seek: seconds });
+        if (this.currentVideo === null) return;
+        const stream = await play.stream(this.currentVideo.url, { seek: seconds });
         const resource = createAudioResource(stream.stream, { inputType: stream.type });
         this._player.play(resource);
     }
@@ -108,7 +98,7 @@ export class Session {
         // Handle Idle state
         this._player.on(AudioPlayerStatus.Idle, async () => {
             await this.playNext();
-            if (this._currentVideo) return;
+            if (this.currentVideo) return;
             this._textChannel.send('Playback is over. Leaving voice channel in 30 seconds');
             this._timeout = setTimeout(() => {
                 this.handleSessionEnd();
