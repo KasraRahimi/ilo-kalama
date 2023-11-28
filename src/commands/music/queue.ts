@@ -33,6 +33,10 @@ module.exports = {
         const title = `__**~ The Queue ~**__`;
         const lastPage = queuePages.length - 1;
         let currentPage = 0;
+        if (queuePages.length === 1) {
+            await interaction.reply(`${title}\n${queuePages[currentPage]}`);
+            return;
+        }
         const msg = await interaction.reply({ content: `${title}\n${queuePages[currentPage]}`, components: [buildNavigationRow(PositionInPages.FIRST)], fetchReply: true });
         
         // Set a collector to handle navigation
