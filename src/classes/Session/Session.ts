@@ -106,8 +106,10 @@ export class Session {
         });
         // Handle Playing state
         this._player.on(AudioPlayerStatus.Playing, () => {
-            if (this._timeout) return;
-            clearTimeout(this._timeout);
+            if (this._timeout) {
+		clearTimeout(this._timeout);	
+		return;
+	    }
         });
     }
 
