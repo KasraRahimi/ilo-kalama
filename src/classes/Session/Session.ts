@@ -4,7 +4,7 @@ import { Guild, TextBasedChannel, VoiceBasedChannel } from 'discord.js';
 import { YouTubeVideo } from 'play-dl';
 import play from 'play-dl';
 
-const TIMEOUT = 3_000;
+const TIMEOUT = 30_000;
 
 export class Session {
     private readonly _guild: Guild;
