@@ -1,6 +1,6 @@
 import { AudioPlayer, AudioPlayerStatus, VoiceConnection, VoiceConnectionStatus, createAudioPlayer, createAudioResource, joinVoiceChannel } from '@discordjs/voice';
 import { Ilo } from '@src/Ilo';
-import { Guild, TextBasedChannel, VoiceBasedChannel } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, Guild, Message, TextBasedChannel, VoiceBasedChannel } from 'discord.js';
 import { YouTubeVideo } from 'play-dl';
 import play from 'play-dl';
 
@@ -14,6 +14,7 @@ export class Session {
     private _player: AudioPlayer;
     private _timeout: NodeJS.Timeout | undefined;
     private _client: Ilo;
+    private _nowPlayingMessage: Message | undefined
     _textChannel: TextBasedChannel;
 
     constructor(guild: Guild, textChannel: TextBasedChannel, vc: VoiceBasedChannel, client: Ilo) {
@@ -55,7 +56,9 @@ export class Session {
 
     async play() {
         if (this._currentIndex === this._queue.length) return;
-        this._textChannel.send(`Now playing: ${this.currentVideo.title}`);
+        this._nowPlayingMessage = await this._textChannel.send(`Now playing: ${this.currentVideo.title}`);
+        this.placeButtonsOnNowPlayingMessage();
+        this.listenToButtons();
         const stream = await play.stream(this.currentVideo.url);
         const resource = createAudioResource(stream.stream, { inputType: stream.type });
         this._player.play(resource);
@@ -81,6 +84,45 @@ export class Session {
         this._connection.destroy();  
     }
 
+    private placeButtonsOnNowPlayingMessage() {
+        if (!this._nowPlayingMessage) return;
+        const pause = new ButtonBuilder()
+            .setCustomId('pause')
+            .setLabel('⏸️')
+            .setStyle(ButtonStyle.Primary);
+        
+        const resume = new ButtonBuilder()
+            .setCustomId('resume')
+            .setLabel('▶️')
+            .setStyle(ButtonStyle.Success);
+        
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(pause, resume);
+
+        this._nowPlayingMessage.edit({ components: [row] });
+    }
+
+    private listenToButtons() {
+        if (!this._nowPlayingMessage) return;
+        
+        const timeOut = this.currentVideo.durationInSec < 15 * 60 ? this.currentVideo.durationInSec * 1000 : 15 * 60 * 1000;
+    
+        const collector = this._nowPlayingMessage.createMessageComponentCollector({ componentType: ComponentType.Button, time: timeOut });
+        collector.on('collect', async (i) => {
+            if (i.customId === 'pause') {
+                this.pause();
+                await i.reply({ content: 'Paused', ephemeral: true });
+            } else if (i.customId === 'resume') {
+                this.resume();
+                await i.reply({ content: 'Resumed', ephemeral: true });
+            }
+        });
+    }
+
+    private clearButtons() {
+        if (!this._nowPlayingMessage) return;
+        this._nowPlayingMessage.edit({ components: [] });
+    }
+
     private getConnection(channelId: string): VoiceConnection {
         const adapterCreator = this._guild.voiceAdapterCreator;
         return joinVoiceChannel({
@@ -97,6 +139,7 @@ export class Session {
         });
         // Handle Idle state
         this._player.on(AudioPlayerStatus.Idle, async () => {
+            this.clearButtons();
             await this.playNext();
             if (this.currentVideo) return;
             this._textChannel.send('Playback is over. Leaving voice channel in 30 seconds');
@@ -119,6 +162,7 @@ export class Session {
             this._textChannel.send('There was an error while playing audio.');
         });
         this._connection.on(VoiceConnectionStatus.Destroyed, () => {
+            this.clearButtons();
             this._textChannel.send('Leaving voice channel');
             this._client.sessions.delete(this._guild.id);
         })
