@@ -101,10 +101,24 @@ export class Session {
         this._nowPlayingMessage.edit({ components: [row] });
     }
 
-    private listenToButtons() {
+    private listenToButtons(iteration: number = 0) {
         if (!this._nowPlayingMessage) return;
         
-        const timeOut = this.currentVideo.durationInSec < 15 * 60 ? this.currentVideo.durationInSec * 1000 : 15 * 60 * 1000;
+        const FIFTEEN_MINUTES_IN_S = 15;
+        const FIFTEEN_MINUTES_IN_MS = FIFTEEN_MINUTES_IN_S * 1000;
+
+        let timeOut = this.currentVideo.durationInSec * 1000;
+
+        if (this.currentVideo.durationInSec > FIFTEEN_MINUTES_IN_S) {
+            const timeleft = this.currentVideo.durationInSec - FIFTEEN_MINUTES_IN_S * iteration;
+            if (timeleft > FIFTEEN_MINUTES_IN_S) {
+                timeOut = FIFTEEN_MINUTES_IN_MS;
+            } else {
+                timeOut = timeleft * 1000;
+            }
+        }
+
+        // const timeOut = this.currentVideo.durationInSec < 15 * 60 ? this.currentVideo.durationInSec * 1000 : 15 * 60 * 1000;
     
         const collector = this._nowPlayingMessage.createMessageComponentCollector({ componentType: ComponentType.Button, time: timeOut });
         collector.on('collect', async (i) => {
@@ -114,6 +128,12 @@ export class Session {
             } else if (i.customId === 'resume') {
                 this.resume();
                 await i.reply({ content: 'Resumed', ephemeral: true });
+            }
+        });
+        collector.on('end', async (collected, reason) => {
+            if (timeOut === FIFTEEN_MINUTES_IN_MS) {
+                this.placeButtonsOnNowPlayingMessage();
+                this.listenToButtons(iteration + 1);
             }
         });
     }
