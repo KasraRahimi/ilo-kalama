@@ -59,12 +59,21 @@ export class Session {
 
     async play() {
         if (this._currentIndex === this._queue.length) return;
-        this._nowPlayingMessage = await this._textChannel.send(`Now playing: ${this.currentVideo.title}`);
-        this.placeButtonsOnNowPlayingMessage();
-        this.listenToButtons();
+        this.updateNowPlayingMessage();
         const stream = await play.stream(this.currentVideo.url);
         const resource = createAudioResource(stream.stream, { inputType: stream.type });
         this._player.play(resource);
+    }
+
+    async updateNowPlayingMessage() {
+        if (this._nowPlayingMessage) {
+            this._nowPlayingMessage.edit(`Now playing: ${this.currentVideo.title}`);
+            return;
+        }
+
+        this._nowPlayingMessage = await this._textChannel.send(`Now playing: ${this.currentVideo.title}`);
+        this.placeButtonsOnNowPlayingMessage();
+        this.listenToButtons();
     }
 
     async seek(seconds: number) {
