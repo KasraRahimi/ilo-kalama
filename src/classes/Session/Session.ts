@@ -5,6 +5,7 @@ import { YouTubeVideo } from 'play-dl';
 import play from 'play-dl';
 
 const TIMEOUT = 30_000;
+const MAX_TIMEOUT = 15 * 60_000
 
 export class Session {
     private readonly _guild: Guild;
@@ -15,6 +16,7 @@ export class Session {
     private _timeout: NodeJS.Timeout | undefined;
     private _client: Ilo;
     private _nowPlayingMessage: Message | undefined
+    private _isSessionOver: boolean = false;
     _textChannel: TextBasedChannel;
 
     constructor(guild: Guild, textChannel: TextBasedChannel, vc: VoiceBasedChannel, client: Ilo) {
@@ -52,6 +54,7 @@ export class Session {
             this._currentIndex++;
             await this.play();
         }
+        this._nowPlayingMessage = undefined;
     }
 
     async play() {
@@ -81,7 +84,8 @@ export class Session {
 
     handleSessionEnd() {
         this._player.stop();
-        this._connection.destroy();  
+        this._connection.destroy();
+        this._isSessionOver = true;
     }
 
     private placeButtonsOnNowPlayingMessage() {
@@ -101,26 +105,12 @@ export class Session {
         this._nowPlayingMessage.edit({ components: [row] });
     }
 
-    private listenToButtons(iteration: number = 0) {
+    private listenToButtons() {
         if (!this._nowPlayingMessage) return;
-        
-        const FIFTEEN_MINUTES_IN_S = 15;
-        const FIFTEEN_MINUTES_IN_MS = FIFTEEN_MINUTES_IN_S * 1000;
 
-        let timeOut = this.currentVideo.durationInSec * 1000;
+        const currentIndex = this._currentIndex;
 
-        if (this.currentVideo.durationInSec > FIFTEEN_MINUTES_IN_S) {
-            const timeleft = this.currentVideo.durationInSec - FIFTEEN_MINUTES_IN_S * iteration;
-            if (timeleft > FIFTEEN_MINUTES_IN_S) {
-                timeOut = FIFTEEN_MINUTES_IN_MS;
-            } else {
-                timeOut = timeleft * 1000;
-            }
-        }
-
-        // const timeOut = this.currentVideo.durationInSec < 15 * 60 ? this.currentVideo.durationInSec * 1000 : 15 * 60 * 1000;
-    
-        const collector = this._nowPlayingMessage.createMessageComponentCollector({ componentType: ComponentType.Button, time: timeOut });
+        const collector = this._nowPlayingMessage.createMessageComponentCollector({ componentType: ComponentType.Button, time: MAX_TIMEOUT });
         collector.on('collect', async (i) => {
             if (i.customId === 'pause') {
                 this.pause();
@@ -130,12 +120,11 @@ export class Session {
                 await i.reply({ content: 'Resumed', ephemeral: true });
             }
         });
-        collector.on('end', async (collected, reason) => {
-            if (timeOut === FIFTEEN_MINUTES_IN_MS) {
-                this.placeButtonsOnNowPlayingMessage();
-                this.listenToButtons(iteration + 1);
-            }
-        });
+        collector.on('end', async () => {
+            if (currentIndex !== this._currentIndex || this._isSessionOver) return;
+            this.placeButtonsOnNowPlayingMessage();
+            this.listenToButtons();
+        })
     }
 
     private clearButtons() {

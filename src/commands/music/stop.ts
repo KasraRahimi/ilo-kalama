@@ -18,5 +18,6 @@ module.exports = {
         }
         await interaction.reply('Stopping the music and clearing the queue.');
         await session.handleSessionEnd();
+        client.sessions.delete(interaction.guildId);
     }
 }
