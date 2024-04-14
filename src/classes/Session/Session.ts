@@ -1,11 +1,11 @@
 import { AudioPlayer, AudioPlayerStatus, VoiceConnection, VoiceConnectionStatus, createAudioPlayer, createAudioResource, joinVoiceChannel } from '@discordjs/voice';
 import { Ilo } from '@src/Ilo';
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, Guild, Message, TextBasedChannel, VoiceBasedChannel } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, CacheType, ComponentType, Guild, InteractionCollector, Message, TextBasedChannel, VoiceBasedChannel } from 'discord.js';
 import { YouTubeVideo } from 'play-dl';
 import play from 'play-dl';
 
 const TIMEOUT = 30_000;
-const MAX_TIMEOUT = 5_000;
+const MAX_TIMEOUT = 15 * 60_000;
 
 export class Session {
     private readonly _guild: Guild;
@@ -16,6 +16,7 @@ export class Session {
     private _timeout: NodeJS.Timeout | undefined;
     private _client: Ilo;
     private _nowPlayingMessage: Message | undefined;
+    private _collector: InteractionCollector<ButtonInteraction<CacheType>> | undefined;
     _textChannel: TextBasedChannel;
 
     constructor(guild: Guild, textChannel: TextBasedChannel, vc: VoiceBasedChannel, client: Ilo) {
@@ -53,7 +54,7 @@ export class Session {
             this._currentIndex++;
             await this.play();
         }
-        this._nowPlayingMessage = undefined;
+        // this._nowPlayingMessage = undefined;
     }
 
     async play() {
@@ -66,7 +67,8 @@ export class Session {
 
     async updateNowPlayingMessage() {
         if (this._nowPlayingMessage) {
-            this._nowPlayingMessage.edit(`Now playing: ${this.currentVideo.title}`);
+            this._nowPlayingMessage = await this._nowPlayingMessage.edit(`Now playing: ${this.currentVideo.title}`);
+            this._collector?.stop();
             return;
         }
 
@@ -116,10 +118,8 @@ export class Session {
     private listenToButtons() {
         if (!this._nowPlayingMessage) return;
 
-        const currentIndex = this._currentIndex;
-
-        const collector = this._nowPlayingMessage.createMessageComponentCollector({ componentType: ComponentType.Button, time: MAX_TIMEOUT });
-        collector.on('collect', async (i) => {
+        this._collector = this._nowPlayingMessage.createMessageComponentCollector({ componentType: ComponentType.Button, time: MAX_TIMEOUT });
+        this._collector.on('collect', async (i) => {
             if (i.customId === 'pause') {
                 this.pause();
                 await i.reply({ content: 'Paused', ephemeral: true });
@@ -128,11 +128,10 @@ export class Session {
                 await i.reply({ content: 'Resumed', ephemeral: true });
             }
         });
-        collector.on('end', async () => {
+        this._collector.on('end', async () => {
             if (!this._nowPlayingMessage) return;
             this.placeButtonsOnNowPlayingMessage();
             this.listenToButtons();
-            console.log('Listening to buttons again');
         })
     }
 
