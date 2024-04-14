@@ -5,7 +5,7 @@ import { YouTubeVideo } from 'play-dl';
 import play from 'play-dl';
 
 const TIMEOUT = 30_000;
-const MAX_TIMEOUT = 15 * 60_000
+const MAX_TIMEOUT = 5_000;
 
 export class Session {
     private readonly _guild: Guild;
@@ -15,8 +15,7 @@ export class Session {
     private _player: AudioPlayer;
     private _timeout: NodeJS.Timeout | undefined;
     private _client: Ilo;
-    private _nowPlayingMessage: Message | undefined
-    private _isSessionOver: boolean = false;
+    private _nowPlayingMessage: Message | undefined;
     _textChannel: TextBasedChannel;
 
     constructor(guild: Guild, textChannel: TextBasedChannel, vc: VoiceBasedChannel, client: Ilo) {
@@ -94,7 +93,7 @@ export class Session {
     handleSessionEnd() {
         this._player.stop();
         this._connection.destroy();
-        this._isSessionOver = true;
+        this._nowPlayingMessage = undefined;
     }
 
     private placeButtonsOnNowPlayingMessage() {
@@ -130,9 +129,10 @@ export class Session {
             }
         });
         collector.on('end', async () => {
-            if (currentIndex !== this._currentIndex || this._isSessionOver) return;
+            if (!this._nowPlayingMessage) return;
             this.placeButtonsOnNowPlayingMessage();
             this.listenToButtons();
+            console.log('Listening to buttons again');
         })
     }
 
