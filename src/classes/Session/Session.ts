@@ -151,7 +151,7 @@ export class Session {
             this.clearButtons();
             await this.playNext();
             if (this.currentVideo) return;
-            this._textChannel.send('Playback is over. Leaving voice channel in 30 seconds');
+            this._textChannel.send(`Playback is over. Leaving voice channel in ${TIMEOUT / 1_000} seconds`);
             this._timeout = setTimeout(() => {
                 this.handleSessionEnd();
             }, TIMEOUT);
